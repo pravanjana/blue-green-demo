@@ -63,23 +63,18 @@ print('Green health check PASSED!')
             steps {
                 echo "Switching Nginx traffic from Blue to Green..."
                 sh '''
-                    cat > /tmp/nginx-green.conf << 'NGINX'
-events {}
-http {
-    upstream active {
-        server green:5000;
-    }
-    server {
-        listen 80;
-        location / {
-            proxy_pass http://active;
-            proxy_set_header Host $host;
-        }
+                    docker exec nginx-proxy sh -c "cat > /etc/nginx/conf.d/default.conf << NGINX
+upstream active {
+    server green:5000;
+}
+server {
+    listen 80;
+    location / {
+        proxy_pass http://active;
     }
 }
-NGINX
+NGINX"
                 '''
-                sh "docker cp /tmp/nginx-green.conf nginx-proxy:/etc/nginx/nginx.conf"
                 sh "docker exec nginx-proxy nginx -s reload"
                 echo "Traffic switched to Green!"
             }
@@ -100,7 +95,7 @@ NGINX
                 sh "docker stop blue || true"
                 sh "docker rm blue || true"
                 sh "docker tag ${APP_NAME}:green ${APP_NAME}:blue"
-                echo "Blue updated to current version. Ready for next deployment."
+                echo "Blue updated. Ready for next deployment."
             }
         }
     }

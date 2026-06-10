@@ -84,8 +84,16 @@ NGINX"
             steps {
                 echo "Verifying Green is serving live traffic..."
                 sh "sleep 3"
-                sh "docker exec nginx-proxy wget -qO- http://localhost/health"
-                echo "Green is live and serving traffic!"
+                sh """
+                    docker exec green python3 -c "
+import urllib.request, json
+res = urllib.request.urlopen('http://green:5000/health')
+data = json.loads(res.read())
+print('Live traffic response:', data)
+assert data['color'] == 'green', 'Wrong environment!'
+print('Verification PASSED — Green is live!')
+"
+                """
             }
         }
 

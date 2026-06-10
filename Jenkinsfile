@@ -4,7 +4,6 @@ pipeline {
     environment {
         APP_NAME    = "flask-bg"
         BUILD_VER   = "2.0.${BUILD_NUMBER}"
-        BLUE_PORT   = "5001"
         GREEN_PORT  = "5002"
     }
 
@@ -63,7 +62,7 @@ print('Green health check PASSED!')
         stage('Switch traffic to Green') {
             steps {
                 echo "Switching Nginx traffic from Blue to Green..."
-                sh """
+                sh '''
                     cat > /tmp/nginx-green.conf << 'NGINX'
 events {}
 http {
@@ -74,12 +73,12 @@ http {
         listen 80;
         location / {
             proxy_pass http://active;
-            proxy_set_header Host \\$host;
+            proxy_set_header Host $host;
         }
     }
 }
 NGINX
-                """
+                '''
                 sh "docker cp /tmp/nginx-green.conf nginx-proxy:/etc/nginx/nginx.conf"
                 sh "docker exec nginx-proxy nginx -s reload"
                 echo "Traffic switched to Green!"
@@ -90,16 +89,14 @@ NGINX
             steps {
                 echo "Verifying Green is serving live traffic..."
                 sh "sleep 3"
-                sh """
-                    docker exec nginx-proxy wget -qO- http://localhost/health
-                """
+                sh "docker exec nginx-proxy wget -qO- http://localhost/health"
                 echo "Green is live and serving traffic!"
             }
         }
 
         stage('Decommission Blue') {
             steps {
-                echo "Blue is now standby — keeping for rollback..."
+                echo "Decommissioning Blue..."
                 sh "docker stop blue || true"
                 sh "docker rm blue || true"
                 sh "docker tag ${APP_NAME}:green ${APP_NAME}:blue"
